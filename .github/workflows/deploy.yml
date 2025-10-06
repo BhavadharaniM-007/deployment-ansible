@@ -2,7 +2,7 @@ name: Deploy with ansible
 
 on:
   push:
-    branches: [ main ]  # Trigger when code is pushed to main branch
+    branches: [ master]  # Trigger when code is pushed to main branch
   workflow_dispatch:     # Allows you to run manually from the Actions tab
 
 jobs:
