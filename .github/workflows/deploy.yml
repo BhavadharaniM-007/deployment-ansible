@@ -12,7 +12,7 @@ jobs:
       - name: Checkout Ansible repo
         uses: actions/checkout@v3
         with:
-          repository: your-org/deployment-ansible
+          repository:  BhavadharaniM-007/deployment-ansible
           ref: master
       - name: Setup SSH key
         run: |
