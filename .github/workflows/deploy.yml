@@ -1,10 +1,9 @@
-name: Deploy App
+name: Deploy with ansible 
 
 on:
-  workflow_run:
-    workflows: ["Terraform Apply"]
-    types:
-      - completed
+  push:
+    branches: [ main ]  # Trigger when code is pushed to main branch
+  workflow_dispatch:     # Allows you to run manually from the Actions tab
 
 jobs:
   ansible_deploy:
