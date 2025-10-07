@@ -1,9 +1,9 @@
-name: Deploy with ansible 
+name: Deploy with Ansible
 
 on:
   push:
-    branches: [ master]  # Trigger when code is pushed to main branch
-  workflow_dispatch:     # Allows you to run manually from the Actions tab
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   ansible_deploy:
@@ -12,17 +12,26 @@ jobs:
       - name: Checkout Ansible repo
         uses: actions/checkout@v3
         with:
-          repository:  BhavadharaniM-007/deployment-ansible
+          repository: BhavadharaniM-007/deployment-ansible
           ref: master
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa_github_actions_new
-          chmod 600 ~/.ssh/id_rsa_github_actions_new 
-      - name: Add EC2 to known_hosts
+          chmod 600 ~/.ssh/id_rsa_github_actions_new
+
+      - name: Generate dynamic inventory.ini
         run: |
-          ssh-keyscan -H 3.239.216.100 >> ~/.ssh/known_hosts
-          ssh-keyscan -H 13.220.33.232 >> ~/.ssh/known_hosts          
+          echo "[app]" > ansibleconfigs/inventory.ini
+          echo "${{ secrets.EC2_PUBLIC_IP_1 }} ansible_user=ec2-user ansible_ssh_private_key_file=/home/runner/.ssh/id_rsa_github_actions_new" >> ansibleconfigs/inventory.ini
+          echo "${{ secrets.EC2_PUBLIC_IP_2 }} ansible_user=ubuntu ansible_ssh_private_key_file=/home/runner/.ssh/id_rsa_github_actions_new" >> ansibleconfigs/inventory.ini
+
+      - name: Add EC2 instances to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP_1 }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP_2 }} >> ~/.ssh/known_hosts
+
       - name: Install Ansible
         run: |
           sudo apt-get update
@@ -33,4 +42,3 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           ansible-playbook -i ansibleconfigs/inventory.ini ansibleconfig/playbook.yml --private-key /home/runner/.ssh/id_rsa_github_actions_new
-        # Use secrets to provide SSH keys if needed
