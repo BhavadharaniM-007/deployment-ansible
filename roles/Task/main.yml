@@ -1,0 +1,3 @@
+---
+- name: Include configure web playbook tasks
+  include_tasks: ../../playbooks/configure_web.yml
