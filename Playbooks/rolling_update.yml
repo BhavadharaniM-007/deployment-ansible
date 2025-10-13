@@ -1,0 +1,27 @@
+- name: Rolling update of backend container
+  hosts: all
+  become: yes
+  serial: 1
+  tasks:
+    - name: Stop old container
+      docker_container:
+        name: backend
+        state: stopped
+
+    - name: Remove old container
+      docker_container:
+        name: backend
+        state: absent
+
+    - name: Pull new image
+      docker_image:
+        name: elsadency/java-backend:1
+        source: pull
+
+    - name: Start new container
+      docker_container:
+        name: backend
+        image: elsadency/java-backend:1
+        state: started
+        ports:
+          - "8080:8080"

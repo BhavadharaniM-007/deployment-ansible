@@ -1,0 +1,32 @@
+
+---
+- name: Configure NGINX
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install NGINX
+      yum:
+        name: nginx
+        state: present
+
+    - name: Configure NGINX reverse proxy
+      copy:
+        dest: /etc/nginx/nginx.conf
+        content: |
+          events {}
+
+          http {
+              server {
+                  listen 80;
+                  location / {
+                      proxy_pass http://localhost:8080;
+                  }
+              }
+          }
+
+    - name: Restart NGINX
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes

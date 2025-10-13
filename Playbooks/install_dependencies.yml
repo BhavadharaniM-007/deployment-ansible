@@ -1,0 +1,46 @@
+---
+- name: Install dependencies on EC2
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Check EC2 OS version
+      command: cat /etc/os-release
+      register: os_info
+
+    - name: Show EC2 OS version
+      debug:
+        var: os_info.stdout_lines
+
+    - name: Import Amazon Corretto GPG key
+      rpm_key:
+        state: present
+        key: https://yum.corretto.aws/corretto.key
+
+    - name: Install Amazon Corretto 11 (Java 11)
+      yum:
+        name: https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.rpm
+        state: present
+
+    - name: Install Node.js (via NodeSource)
+      shell: |
+        curl -sL https://rpm.nodesource.com/setup_20.x | bash -
+        yum install -y nodejs
+      args:
+        executable: /bin/bash
+
+    - name: Install npm (comes with Node.js)
+      command: npm -v
+      register: npm_check
+      changed_when: false
+
+    - name: Install Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started

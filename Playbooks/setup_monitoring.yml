@@ -1,0 +1,137 @@
+---
+- name: Setup Monitoring Stack (Node Exporter + Prometheus + Grafana)
+  hosts: all
+  become: yes
+
+  vars:
+    prometheus_dir: /opt/monitoring
+    grafana_admin_password: "ChangeMe123!"
+
+  tasks:
+
+    # 1️⃣ Install base packages and Python3
+    - name: Install base packages and Python3
+      raw: |
+        if [ -f /etc/os-release ]; then
+          . /etc/os-release
+          if [[ "$ID" == "amzn" ]]; then
+            dnf install -y python3 ca-certificates gnupg2 curl || true
+          elif command -v apt-get >/dev/null 2>&1; then
+            apt-get update -y && apt-get install -y python3 python3-apt ca-certificates gnupg lsb-release curl
+          fi
+        fi
+      changed_when: false
+
+    # 2️⃣ Install Docker engine
+    - name: Install Docker engine
+      shell: |
+        if ! command -v docker >/dev/null 2>&1; then
+          if command -v dnf >/dev/null 2>&1; then
+            dnf install -y docker
+          elif command -v apt-get >/dev/null 2>&1; then
+            apt-get install -y docker.io
+          fi
+          systemctl enable docker
+          systemctl start docker
+        fi
+      args:
+        executable: /bin/bash
+
+    # 3️⃣ Install Docker Compose v2 plugin
+    - name: Install Docker Compose plugin
+      shell: |
+        if ! docker compose version >/dev/null 2>&1; then
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          curl -sSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+        fi
+      args:
+        executable: /bin/bash
+
+    # 4️⃣ Create monitoring directory
+    - name: Create monitoring directory
+      file:
+        path: "{{ prometheus_dir }}"
+        state: directory
+        mode: '0755'
+
+    # 5️⃣ Create Prometheus config (scrapes itself + node_exporter)
+    - name: Create Prometheus configuration
+      copy:
+        dest: "{{ prometheus_dir }}/prometheus.yml"
+        content: |
+          global:
+            scrape_interval: 5s
+
+          scrape_configs:
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+
+            - job_name: 'node_exporter'
+              static_configs:
+                - targets: ['localhost:9100']
+        mode: '0644'
+
+    # 6️⃣ Create Grafana datasource configuration
+    - name: Create Grafana datasource
+      copy:
+        dest: "{{ prometheus_dir }}/grafana-datasource.yml"
+        content: |
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://localhost:9090
+              isDefault: true
+        mode: '0644'
+
+    # 7️⃣ Create docker-compose.yml
+    - name: Create docker-compose.yml
+      copy:
+        dest: "{{ prometheus_dir }}/docker-compose.yml"
+        content: |
+          version: "3.8"
+
+          services:
+            node_exporter:
+              image: prom/node-exporter:latest
+              container_name: node_exporter
+              network_mode: host
+              pid: host
+              restart: unless-stopped
+
+            prometheus:
+              image: prom/prometheus:latest
+              container_name: prometheus
+              network_mode: host
+              volumes:
+                - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+              depends_on:
+                - node_exporter
+              restart: unless-stopped
+
+            grafana:
+              image: grafana/grafana:latest
+              container_name: grafana
+              network_mode: host
+              environment:
+                GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
+                GF_USERS_ALLOW_SIGN_UP: "false"
+              volumes:
+                - ./grafana/provisioning:/etc/grafana/provisioning:ro
+              depends_on:
+                - prometheus
+              restart: unless-stopped
+        mode: '0644'
+
+    # 8️⃣ Launch stack
+    - name: Start monitoring stack
+      shell: |
+        cd {{ prometheus_dir }}
+        docker compose down --remove-orphans
+        docker compose up -d
+      args:
+        executable: /bin/bash

@@ -1,0 +1,62 @@
+
+- name: Deploy Docker containers on EC2
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Check if Docker is installed
+      command: which docker
+      register: docker_check
+      ignore_errors: true
+
+    - name: Install Docker (only if not installed)
+      block:
+        - name: Update packages
+          yum:
+            name: "*"
+            state: latest
+
+        - name: Install Docker
+          yum:
+            name: docker
+            state: present
+
+        - name: Enable and start Docker
+          service:
+            name: docker
+            state: started
+            enabled: yes
+
+        - name: Add ec2-user to Docker group
+          user:
+            name: ec2-user
+            groups: docker
+            append: yes
+      when: docker_check.rc != 0
+
+    - name: Create app network
+      docker_network:
+        name: app-network
+        state: present
+
+    - name: Run backend container
+      docker_container:
+        name: backend
+        image: elsadency/java-backend:1
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8080:8080"
+        networks:
+          - name: app-network
+
+    - name: Run frontend container
+      docker_container:
+        name: frontend
+        image: elsadency/frontend-app:2
+        state: started
+        restart_policy: always
+        published_ports:
+          - "5000:80"
+        networks:
+          - name: app-network
