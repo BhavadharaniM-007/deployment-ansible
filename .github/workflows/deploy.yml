@@ -84,3 +84,4 @@ jobs:
           ansible-playbook -i inventory.ini Playbooks/env_and_ssl.yml
           ansible-playbook -i inventory.ini Playbooks/rolling_update.yml
           ansible-playbook -i inventory.ini Playbooks/setup_monitoring.yml
+          
