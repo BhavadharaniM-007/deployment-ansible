@@ -50,7 +50,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
         run: |
-          cd Tf-den/terraform_infra
+          cd devops/terraform_infra
           rm -rf .terraform .terraform.lock.hcl
           terraform init -reconfigure -input=false
           terraform apply -auto-approve
