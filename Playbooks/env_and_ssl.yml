@@ -33,7 +33,7 @@
     - name: Copy SSL private key to /etc/ssl/private
       copy:
         content: "{{ lookup('env', 'EC2_SSH_KEY') }}"
-        dest: /etc/ssl/private/id_rsa_github_actions_new
+        dest: /etc/ssl/private/my-aws-key
         mode: '0600'
         owner: root
         group: root
