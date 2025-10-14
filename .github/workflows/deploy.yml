@@ -21,15 +21,15 @@ jobs:
       - name: Checkout Terraform repo
         uses: actions/checkout@v4
         with:
-          repository: Dency-28/Tf-den
-          path: Tf-den
+          repository: BhavadharaniM-007/devops
+          path: devops
 
       # 3️⃣ Setup SSH key for EC2
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOYER_NEW }}" > ~/.ssh/deployer.pem
-          chmod 600 ~/.ssh/deployer.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa_github_actions_new
+          chmod 600 ~/.ssh/id_rsa_github_actions_new
           echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
       # 4️⃣ Install Terraform & Ansible
@@ -62,7 +62,7 @@ jobs:
       - name: Generate Inventory
         run: |
           echo "[all]" > inventory.ini
-          echo "ec2-instance ansible_host=$EC2_IP ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/deployer.pem" >> inventory.ini
+          echo "ec2-instance ansible_host=$EC2_IP ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/id_rsa_github_actions_new" >> inventory.ini
           echo "[all:vars]" >> inventory.ini
           echo "ansible_python_interpreter=/usr/bin/python3" >> inventory.ini
           cat inventory.ini
@@ -76,7 +76,7 @@ jobs:
       - name: Run Ansible Playbooks
         env:
           CERT_PEM: ${{ secrets.CERT_PEM }}
-          PRIVKEY_PEM: ${{ secrets.PRIVKEY_PEM }}
+          PRIVKEY_PEM: ${{ secrets.EC2_SSH_KEY }}
         run: |
           ansible-playbook -i inventory.ini Playbooks/install_dependencies.yml
           ansible-playbook -i inventory.ini Playbooks/configure_nginx.yml
